@@ -35,5 +35,5 @@ Vodnala Sumedha.
 
 ## Screenshot
 
-![Real-Time Chat Application](image/chat_output.png)
+![Real-Time Chat Application](images/chat_output.png)
 
