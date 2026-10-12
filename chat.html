@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simple Chat</title>
+<style>
+  /* ---------- 1. Colors (change these to re-theme the app) ---------- */
+  :root {
+    --page: #e8ecf6;
+    --card: #ffffff;
+    --header: #3b3f9e;
+    --header-text: #ffffff;
+    --chat-bg: #f4f6fc;
+    --in-bubble: #ffffff;
+    --in-text: #1f2340;
+    --out-bubble: #4f55d6;
+    --out-text: #ffffff;
+    --muted: #7a7f9e;
+    --border: #d9ddee;
+    --online: #3ddc84;
+    --accent: #4f55d6;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #121425; --card: #1b1e36; --header: #2b2f6e; --chat-bg: #151830;
+      --in-bubble: #262a4a; --in-text: #eceefc; --out-bubble: #5a60e0;
+      --muted: #9a9fc4; --border: #31355c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #121425; --card: #1b1e36; --header: #2b2f6e; --chat-bg: #151830;
+    --in-bubble: #262a4a; --in-text: #eceefc; --out-bubble: #5a60e0;
+    --muted: #9a9fc4; --border: #31355c;
+  }
+
+  /* ---------- 2. Layout ---------- */
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    background: var(--page);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .chat {
+    width: 100%; max-width: 440px; height: 100%; max-height: 720px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 10px 30px rgba(40, 45, 110, .15);
+  }
+
+  /* ---------- 3. Message header ---------- */
+  .header {
+    background: var(--header); color: var(--header-text);
+    display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center;
+    font-weight: 600; font-size: 14px; color: #fff;
+  }
+  .avatar.big { width: 46px; height: 46px; font-size: 17px; position: relative; }
+  .avatar.big::after {               /* green "online" dot */
+    content: ""; position: absolute; right: 0; bottom: 0;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--muted); border: 2px solid var(--header);
+  }
+  .avatar.big.online::after { background: var(--online); }
+  .friend { background: #e0829b; }
+  .me { background: #f0a43a; }
+  .who { flex: 1; min-width: 0; }
+  .name { font-weight: 600; font-size: 16px; }
+  .status { font-size: 12.5px; opacity: .85; margin-top: 2px; }
+
+  /* ---------- 4. Message page ---------- */
+  .messages {
+    flex: 1; overflow-y: auto; padding: 16px 14px;
+    background: var(--chat-bg);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .day {
+    align-self: center; font-size: 12px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--border);
+    padding: 3px 12px; border-radius: 999px;
+  }
+  .row { display: flex; align-items: flex-end; gap: 8px; max-width: 85%; }
+  .row.out { align-self: flex-end; flex-direction: row-reverse; }
+  .bubble {
+    padding: 9px 13px; border-radius: 16px; line-height: 1.4;
+    font-size: 15px; overflow-wrap: anywhere;
+  }
+  .in .bubble { background: var(--in-bubble); color: var(--in-text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .out .bubble { background: var(--out-bubble); color: var(--out-text); border-bottom-right-radius: 4px; }
+  .time { display: block; font-size: 11px; margin-top: 4px; opacity: .65; text-align: right; }
+
+  .typing .bubble { display: flex; gap: 4px; padding: 13px 14px; }
+  .typing i {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--muted);
+    animation: blink 1s infinite;
+  }
+  .typing i:nth-child(2) { animation-delay: .15s; }
+  .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: .3; } 40% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .typing i { animation: none; } }
+
+  /* ---------- 5. Message bottom ---------- */
+  .bottom {
+    display: flex; gap: 10px; padding: 12px 14px;
+    border-top: 1px solid var(--border); background: var(--card);
+  }
+  .bottom input {
+    flex: 1; min-width: 0; padding: 11px 16px; font-size: 15px;
+    border: 1px solid var(--border); border-radius: 999px;
+    background: var(--chat-bg); color: var(--in-text);
+  }
+  .bottom input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .bottom button {
+    padding: 0 20px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--accent); color: #fff; font-size: 15px; font-weight: 600;
+  }
+  .bottom button:hover { filter: brightness(1.1); }
+  .bottom button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .bottom button:disabled { opacity: .45; cursor: not-allowed; }
+
+  @media (max-width: 480px) {
+    body { padding: 0; }
+    .chat { max-height: none; border-radius: 0; border: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ---------- HTML structure ---------- -->
+<main class="chat">
+
+  <!-- Message header: avatar, name, last seen -->
+  <header class="header">
+    <div class="avatar big friend online" id="headerAvatar">S</div>
+    <div class="who">
+      <div class="name">Sumedha</div>
+      <div class="status" id="status">Online</div>
+    </div>
+  </header>
+
+  <!-- Chat box: message page -->
+  <section class="messages" id="messages" aria-live="polite">
+    <div class="day">Today</div>
+  </section>
+
+  <!-- Chat box: message bottom -->
+  <form class="bottom" id="form" autocomplete="off">
+    <input id="input" type="text" placeholder="Type a message…" aria-label="Type a message" maxlength="500">
+    <button id="send" type="submit" disabled>Send</button>
+  </form>
+</main>
+
+<script>
+  // ---------- JavaScript ----------
+  const messagesEl = document.getElementById("messages");
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const sendBtn = document.getElementById("send");
+  const statusEl = document.getElementById("status");
+  const headerAvatar = document.getElementById("headerAvatar");
+
+    // Smart replies: each rule has words to look for and some answers to pick from.
+  // The FIRST rule that matches the user's message wins. Add your own rules here!
+  const rules = [
+    { match: /\b(hi|hii+|hello|hey|heyy+|hola)\b/,
+      say: ["Hi! 👋", "Hello! 😊", "Hey! Good to hear from you!"] },
+    { match: /good morning|\bgm\b/,
+      say: ["Good morning! ☀️ Hope you slept well.", "Good morning! Ready for the day?"] },
+    { match: /good night|\bgn\b/,
+      say: ["Good night! 🌙 Sleep well.", "Night night! See you tomorrow."] },
+    { match: /good afternoon/, say: ["Good afternoon! How's your day going?"] },
+    { match: /good evening/, say: ["Good evening! How was your day?"] },
+    { match: /how are you|how r u|how are u|how's it going|hows it going|what's up|whats up|wassup|sup\b/,
+      say: ["I'm doing great, thanks for asking! How about you? 😊", "All good here! What about you?"] },
+    { match: /\b(i'm|im|i am) (fine|good|great|okay|ok|well)\b|^(fine|good|great)\b/,
+      say: ["Glad to hear that! 😄", "Nice! Anything fun planned today?"] },
+    { match: /\b(sad|tired|bored|stressed|sick|upset)\b/,
+      say: ["Aw, I'm sorry to hear that. Want to talk about it? 💙", "Hope you feel better soon. Take a little break! 🌿"] },
+    { match: /your name|who are you|who r u/,
+      say: ["I'm Sumedha! Nice to chat with you 😊"] },
+    { match: /\bwhat time\b|\btime now\b/,
+      say: [() => "It's " + timeNow() + " right now. ⏰"] },
+    { match: /\bwhat('s| is) (the )?(date|day)\b|\btoday's date\b/,
+      say: [() => "Today is " + new Date().toLocaleDateString([], { weekday: "long", day: "numeric", month: "long" }) + ". 📅"] },
+    { match: /\bthank(s| you)|\bthx\b|\bty\b/,
+      say: ["You're welcome! 😊", "No problem, happy to help!"] },
+    { match: /\bsorry\b/, say: ["No worries at all!", "It's okay, don't worry about it 🙂"] },
+    { match: /\b(bye|goodbye|see you|see ya|cya|ttyl)\b/,
+      say: ["Bye! Take care! 👋", "See you soon! 😊"] },
+    { match: /\b(lol|haha+|hehe+|lmao)\b/, say: ["Haha 😂", "Ha! That was funny 😄"] },
+    { match: /\b(love you|i love)\b/, say: ["Aww, that's so sweet! ❤️"] },
+    { match: /\b(exam|test|homework|assignment|study|studying|class|school|college)\b/,
+      say: ["Studying is tough, but you've got this! 📚 Which subject?", "Good luck! Need a study buddy? 😄"] },
+    { match: /\b(food|eat|eating|hungry|lunch|dinner|breakfast|pizza|biryani)\b/,
+      say: ["Now I'm hungry too! 😋 What's your favourite food?", "Yum! What are you having?"] },
+    { match: /\b(movie|film|music|song|game|cricket|football)\b/,
+      say: ["Ooh, nice! What do you like most about it?", "That sounds fun! Tell me more 🎬"] },
+    { match: /\b(yes|yeah|yep|sure|ok|okay)\b/, say: ["Great! 👍", "Cool, sounds good!"] },
+    { match: /\b(no|nope|nah)\b/, say: ["Oh, okay. Why not?", "That's fine! 🙂"] },
+    { match: /\?\s*$/, say: ["Hmm, good question! What do you think?", "I'm not sure. What's your opinion?"] }
+  ];
+
+  // Used when no rule matches. These keep the conversation going.
+  const fallback = [
+    "Interesting! Tell me more.",
+    "Oh really? 😮 Why is that?",
+    "I see! And then what happened?",
+    "Hmm, that makes sense. What else is new?"
+  ];
+
+  // "my name is Ravi" -> "Nice to meet you, Ravi!"
+  function getReply(text) {
+    const msg = text.toLowerCase().trim();
+    const nameMatch = msg.match(/(?:my name is|i am called|call me)\s+([a-z]+)/);
+    if (nameMatch) {
+      const n = nameMatch[1][0].toUpperCase() + nameMatch[1].slice(1);
+      return "Nice to meet you, " + n + "! 😊";
+    }
+    for (const rule of rules) {
+      if (rule.match.test(msg)) {
+        const answer = rule.say[Math.floor(Math.random() * rule.say.length)];
+        return typeof answer === "function" ? answer() : answer;
+      }
+    }
+    return fallback[Math.floor(Math.random() * fallback.length)];
+  }
+
+  // Format the current time like "10:42 AM"
+  function timeNow() {
+    return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+
+  // Add one message to the page. type is "in" or "out".
+  function addMessage(text, type) {
+    const row = document.createElement("div");
+    row.className = "row " + type;
+
+    const avatar = document.createElement("div");
+    avatar.className = "avatar " + (type === "in" ? "friend" : "me");
+    avatar.textContent = type === "in" ? "S" : "Me";
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+    bubble.textContent = text;            // textContent keeps user text safe
+
+    const time = document.createElement("span");
+    time.className = "time";
+    time.textContent = timeNow();
+    bubble.appendChild(time);
+
+    row.append(avatar, bubble);
+    messagesEl.appendChild(row);
+    scrollDown();
+  }
+
+  function scrollDown() { messagesEl.scrollTop = messagesEl.scrollHeight; }
+
+  // "Typing…" dots shown while the friend is replying
+  function showTyping() {
+    const row = document.createElement("div");
+    row.className = "row in typing";
+    row.id = "typing";
+    row.innerHTML = '<div class="avatar friend">S</div><div class="bubble"><i></i><i></i><i></i></div>';
+    messagesEl.appendChild(row);
+    scrollDown();
+  }
+  function hideTyping() {
+    const t = document.getElementById("typing");
+    if (t) t.remove();
+  }
+
+  // Header status: "Online" or "Last seen today at …"
+  function setOnline(isOnline) {
+    headerAvatar.classList.toggle("online", isOnline);
+    statusEl.textContent = isOnline ? "Online" : "Last seen today at " + timeNow();
+  }
+
+  let awayTimer;
+  function friendReply(userText) {
+  const currentReply = getReply(userText);
+    clearTimeout(awayTimer);
+    setOnline(true);
+    statusEl.textContent = "typing…";
+    showTyping();
+    setTimeout(() => {
+      hideTyping();
+      addMessage(currentReply, "in");
+      setOnline(true);
+      // After 15 seconds of silence the friend goes "offline"
+      awayTimer = setTimeout(() => setOnline(false), 15000);
+    }, 1200 + Math.random() * 1200);
+  }
+
+  // Enable the Send button only when there is text
+  input.addEventListener("input", () => {
+    sendBtn.disabled = input.value.trim() === "";
+  });
+
+  // Send on button click or Enter key (the form handles both)
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    addMessage(text, "out");
+    input.value = "";
+    sendBtn.disabled = true;
+    input.focus();
+    friendReply(text);
+  });
+
+  // Starter message
+  addMessage("Hi! 👋 Type a message below to start chatting.", "in");
+  awayTimer = setTimeout(() => setOnline(false), 15000);
+</script>
+</body>
+</html>
