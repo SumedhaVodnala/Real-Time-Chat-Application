@@ -32,3 +32,8 @@ This project was developed to practice frontend web development and create an in
 ## Author
 
 Vodnala Sumedha.
+
+## Screenshot
+
+![Real-Time Chat Application](image/chat_output.png)
+
