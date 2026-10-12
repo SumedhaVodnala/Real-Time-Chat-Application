@@ -13,12 +13,12 @@ const replies = [
   "Thanks for telling me 😊"
 ];
 
-// Format the current time like "10:42 AM"
+
 function timeNow() {
   return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-// Add one message to the page. type is "in" or "out".
+
 function addMessage(text, type) {
   const row = document.createElement("div");
   row.className = "row " + type;
@@ -29,7 +29,7 @@ function addMessage(text, type) {
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
-  bubble.textContent = text;            // textContent keeps user text safe
+  bubble.textContent = text;           
 
   const time = document.createElement("span");
   time.className = "time";
